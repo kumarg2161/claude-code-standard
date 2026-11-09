@@ -1,0 +1,29 @@
+{
+  "permissions": {
+    "allow": [
+      "Read", "Grep", "Glob",
+      "Bash(pnpm test*)", "Bash(pnpm run *)", "Bash(pnpm --filter *)", "Bash(pnpm -r *)", "Bash(pnpm exec *)", "Bash(pnpm -w *)",
+      "Bash(npm test*)", "Bash(npm run *)", "Bash(npm exec --no -- *)",
+      "Bash(yarn test*)", "Bash(yarn run *)", "Bash(yarn workspace *)",
+      "Bash(node *)", "Bash(jq *)",
+      "Bash(git status*)", "Bash(git diff*)", "Bash(git log*)", "Bash(git show*)", "Bash(git rev-parse*)",
+      "Bash(git ls-files*)", "Bash(git add *)", "Bash(git commit *)", "Bash(git mv *)", "Bash(git rm *)",
+      "Bash(ls*)", "Bash(cat *)", "Bash(head *)", "Bash(tail *)", "Bash(wc *)", "Bash(sort *)", "Bash(grep *)",
+      "Bash(rg *)", "Bash(find *)", "Bash(mkdir *)", "Bash(echo *)", "Bash(pwd)", "Bash(test *)", "Bash(rm .ccs/active)",
+      "Bash(*detect-verify.sh*)", "Bash(*ensure-ignored.sh*)", "Bash(*next-feature.sh*)"
+    ],
+    "deny": [
+      "Bash(git push*)", "Bash(git remote*)", "Bash(git branch*)", "Bash(git switch*)", "Bash(git checkout -b*)",
+      "Bash(git merge*)", "Bash(git rebase*)", "Bash(git tag*)", "Bash(git worktree*)", "Bash(git config*)",
+      "Bash(gh *)", "Bash(npx *)", "Bash(pnpm dlx*)", "Bash(bunx *)", "Bash(yarn dlx*)",
+      "Bash(pnpm add*)", "Bash(pnpm remove*)", "Bash(pnpm install*)", "Bash(pnpm i *)", "Bash(npm install*)", "Bash(npm i *)", "Bash(yarn add*)",
+      "Bash(pnpm publish*)", "Bash(npm publish*)", "Bash(eas *)", "Bash(expo *)",
+      "Bash(curl *)", "Bash(wget *)", "Bash(ssh *)", "Bash(scp *)",
+      "Bash(docker *)", "Bash(aws *)", "Bash(terraform *)", "Bash(kubectl *)",
+      "Bash(sudo *)", "Bash(rm -rf *)", "Bash(rm -r *)",
+      "Read(**/.env)", "Read(**/.env.*)", "Read(**/*.pem)", "Read(**/*.key)", "Read(**/.ssh/**)", "Read(**/.aws/**)",
+      "Edit(**/.env)", "Edit(**/.env.*)", "Write(**/.env)", "Write(**/.env.*)",
+      "Edit(.github/workflows/**)", "Write(.github/workflows/**)"
+    ]
+  }
+}
