@@ -1,0 +1,29 @@
+{
+  "name": "claude-code-standard",
+  "owner": { "name": "Ganesh Kumar S" },
+  "metadata": {
+    "description": "Spec-driven, autonomous delivery toolkit for TypeScript backend, React web and React Native mobile."
+  },
+  "plugins": [
+    {
+      "name": "ccs-core",
+      "source": "./plugins/ccs-core",
+      "description": "Spec workflow, autonomous run cycle, independent review, PR and HTML status report, plus safety hooks. Stack-agnostic."
+    },
+    {
+      "name": "ccs-backend-ts",
+      "source": "./plugins/ccs-backend-ts",
+      "description": "TypeScript backend pack: API/DB design skills, Vitest + supertest recipes. Requires ccs-core."
+    },
+    {
+      "name": "ccs-web-react",
+      "source": "./plugins/ccs-web-react",
+      "description": "React web pack: component/state/a11y skills, RTL + Playwright recipes. Requires ccs-core."
+    },
+    {
+      "name": "ccs-mobile-rn",
+      "source": "./plugins/ccs-mobile-rn",
+      "description": "React Native / Expo pack: skills, Jest + RNTL recipes, opt-in Maestro. Requires ccs-core."
+    }
+  ]
+}

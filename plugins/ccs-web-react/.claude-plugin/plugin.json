@@ -1,0 +1,6 @@
+{
+  "name": "ccs-web-react",
+  "version": "0.1.0",
+  "description": "React web pack: component, state and accessibility skills, React Testing Library + Playwright recipes. Requires the ccs-core plugin.",
+  "author": { "name": "Ganesh Kumar S" }
+}
