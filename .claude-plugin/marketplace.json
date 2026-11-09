@@ -1,6 +1,8 @@
 {
   "name": "claude-code-standard",
-  "owner": { "name": "Ganesh Kumar S" },
+  "owner": {
+    "name": "Ganesh Kumar S"
+  },
   "metadata": {
     "description": "Spec-driven, autonomous delivery toolkit for TypeScript backend, React web and React Native mobile."
   },

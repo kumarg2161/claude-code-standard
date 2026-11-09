@@ -2,5 +2,7 @@
   "name": "ccs-backend-ts",
   "version": "0.1.0",
   "description": "TypeScript backend pack: API and database design skills, Vitest + supertest test recipes. Requires the ccs-core plugin.",
-  "author": { "name": "Ganesh Kumar S" }
+  "author": {
+    "name": "Ganesh Kumar S"
+  }
 }

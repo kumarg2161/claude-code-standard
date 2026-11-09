@@ -94,6 +94,21 @@ evidence, a fresh-session review that stayed out of the implementer's notes, `ma
 - The runner stops *starting* work at `--until`; a running task may finish up to `--task-timeout-min`.
 - Compound shell commands (`a; b`) do not match allow rules and are denied. See `docs/AUTONOMY.md`.
 
+## Versioning and releasing
+
+One lockstep [SemVer](https://semver.org/) version across all four plugins (`plugins/*/.claude-plugin/plugin.json`); history in
+[`CHANGELOG.md`](CHANGELOG.md). `tests/version.test.mjs` fails if the versions drift or the changelog lacks the current version.
+
+```bash
+# 1. describe changes under "## [Unreleased]" in CHANGELOG.md (the bump refuses an empty section)
+node scripts/bump-version.mjs patch        # or minor | major | X.Y.Z   (--dry-run to preview)
+git diff                                   # review
+git commit -am "chore(release): vX.Y.Z" && git tag -a vX.Y.Z -m "vX.Y.Z"
+git push origin main --follow-tags
+```
+Claude Code only offers an update to installed users when the `version` in `plugin.json` changes, so **always bump before pushing a change you want others to receive.**
+Pre-1.0: breaking changes bump the minor version.
+
 ## Developing
 
 ```bash
