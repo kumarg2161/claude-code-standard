@@ -1,102 +1,36 @@
-# Running this setup on native Windows
+# Native Windows notes
 
-For teammates running Claude Code directly on Windows rather than through WSL.
-If you use WSL, follow the main README — you are on the Linux path and none of
-this applies.
+**Status: untested.** The plugin was built and verified on macOS. This page keeps what is known to matter on native
+Windows from earlier versions of this repo, plus the new risks the plugin layout introduces. If you use WSL, follow the
+README: you are on the Linux path and none of this applies.
 
-## Install
+## Git for Windows is required for the hooks
 
-From PowerShell:
-
-```powershell
-git clone <this-repo> claude-standard
-cd claude-standard
-Copy-Item templates\CLAUDE.personal.example.md CLAUDE.personal.md   # edit it
-.\install.ps1            # dry run
-.\install.ps1 -Apply
-```
-
-Config goes to `%USERPROFILE%\.claude`. If PowerShell blocks the script, run it
-for this session only:
-
-```powershell
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-```
-
-## Install Git for Windows first
-
-Every hook in this repo is a POSIX shell script. Hook commands execute under Git
-Bash when it is on PATH, and fall back to `cmd.exe` otherwise — where a `.sh`
-file will not run.
-
-That failure is **non-blocking**. The hooks stay listed in `/hooks`, report
+Every hook is a POSIX shell script. Hook commands run under Git Bash when it is on PATH and fall back to `cmd.exe`
+otherwise, where a `.sh` file will not run. That failure is **non-blocking**: the hooks stay listed in `/hooks`, report
 nothing, and never execute. Your entire safety layer is off and looks fine.
 
-`install.ps1` checks for Git Bash and warns before letting you continue. If it is
-installed but not detected, set the path in your `settings.json`:
+If Git Bash is installed but not detected, set it in `settings.json`:
 
 ```json
 { "env": { "CLAUDE_CODE_GIT_BASH_PATH": "C:\\Program Files\\Git\\bin\\bash.exe" } }
 ```
 
-Claude Code without Git for Windows still works — it uses PowerShell for shell
-commands. It is only the hooks that need bash.
+## Known traps
 
-## Two Windows-specific traps the installer handles
+- **Backslash paths break under Git Bash.** `C:\Users\me\x.sh` is read as escape sequences
+  (`C:Usersmex.sh: command not found`). The plugin registers hooks as `bash "${CLAUDE_PLUGIN_ROOT}/hooks/x.sh"`.
+  **Whether `CLAUDE_PLUGIN_ROOT` expands to a backslash path on Windows is unverified.** If hooks never fire, this is the first suspect.
+- **CRLF breaks shell scripts** (`\r: command not found`). `.gitattributes` forces LF on `*.sh`; check line endings if you edit a hook in Notepad.
+- **The runner** (`bin/ccs-run.mjs`) is Node and avoids shell-specific code, but it runs `git`, `gh`, `pnpm` and `bash` (for
+  `detect-verify.sh`) by name. It has not been run on Windows.
+- Keep repos on a local drive. On a mapped share, `git rev-parse --show-toplevel` can return a UNC path that Git Bash handles poorly.
+- The VS Code extension has a known issue reporting "requires git-bash" despite Git Bash being installed. The CLI works in the same environment.
+- Windows and WSL keep **separate** Claude configs (`C:\Users\you\.claude` vs `\\wsl$\...\.claude`). Check `claude doctor` and `/status`
+  to see which is live before installing plugins.
 
-**Backslash paths break under Git Bash.** A hook registered as
-`C:\Users\me\.claude\hooks\x.sh` is read as escape sequences, not a path:
+## Prove the hooks run
 
-```
-bash: line 1: C:Usersme.claudehooksx.sh: command not found
-```
-
-Hook commands are therefore written in POSIX form —
-`/c/Users/me/.claude/hooks/x.sh` — which `install.ps1` generates for you. If you
-add a hook by hand, convert the path the same way.
-
-**CRLF line endings break shell scripts.** A `.sh` checked out with CRLF fails
-under bash with `\r: command not found`. The repo's `.gitattributes` forces LF on
-`*.sh` regardless of your `core.autocrlf`, and the installer normalises endings
-as it writes. If you edit a hook in Notepad, check the endings before committing.
-
-## Verify it actually works
-
-`/hooks` proves registration, not execution. Restart Claude Code, then:
-
-```powershell
-bash "/c/Users/$env:USERNAME/.claude/tools/add-hook-audit.sh" --apply
-```
-
-Restart again, use Claude for anything, then check
-`%USERPROFILE%\.claude\hook-audit.log`. Entries mean the hooks are firing. An
-empty file means they are registered and dead — almost always Git Bash missing,
-a backslash path, or CRLF endings.
-
-## VS Code extension
-
-The extension has a known issue where it reports "Claude Code on Windows requires
-git-bash" despite Git Bash being installed and `CLAUDE_CODE_GIT_BASH_PATH` set at
-both user and machine level. The CLI works from a terminal in the same
-environment. If you hit it, run Claude Code from the terminal until it is fixed.
-
-## Which config directory is live
-
-Windows and WSL keep separate configs. `C:\Users\you\.claude` and
-`\\wsl$\Ubuntu\home\you\.claude` are different directories, and installing into
-one while running the other is the most common way to spend an hour debugging a
-setup that was never loaded.
-
-Run `claude doctor` and `/status` to confirm which one is in use before
-installing. If VS Code shows `WSL: Ubuntu` in the status bar, you are on the
-Linux side — use `install.sh`, not this file.
-
-## The pipeline itself
-
-Unchanged. `/work`, `/plan`, `/testplan`, `/implement`, `/review`, `/verify` all
-behave identically; `detect-verify.sh` and `ensure-ignored.sh` run through the
-Bash tool. See `docs/PIPELINE.md`.
-
-One caveat: if your repo lives on a network drive or a mapped share, `git
-rev-parse --show-toplevel` can return a UNC path that Git Bash handles poorly.
-Keep repos on a local drive.
+`/hooks` shows registration, not execution. Ask Claude to run `cat .env` in a scratch repo that contains a fake `.env`.
+The Bash guard should block it and append a `DENY` line to `%USERPROFILE%\.claude\hook-audit.log`. No entry means the hooks are
+registered and dead. Set `CLAUDE_HOOK_LOG` to use a different log path.

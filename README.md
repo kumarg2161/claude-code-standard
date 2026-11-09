@@ -37,8 +37,8 @@ Requires: Claude Code >= 2.1.3xx (uses `--permission-prompts`), Node >= 20, git,
 Commands appear namespaced: `/ccs-core:ccs-init`, `/ccs-core:ccs-specify`, ...
 Try it without installing: `claude --plugin-dir plugins/ccs-core --plugin-dir plugins/ccs-backend-ts`.
 
-> **Migrating from the old installer** (`install.sh`/`install.ps1`/`base/`/`pipeline/`): those are superseded. Hooks now
-> register through the plugin's `hooks.json`; do not run both, or every hook fires twice.
+> **Migrating from the old installer** (`install.sh`, `install.ps1`, `base/`, `pipeline/`, removed in this version): hooks now register
+> through the plugin's `hooks.json`. If you ran the old installer, remove its hook entries from `~/.claude/settings.json`, or every hook fires twice.
 
 ## Build a product with it
 
