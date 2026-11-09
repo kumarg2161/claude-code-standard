@@ -44,7 +44,7 @@ export function renderReport(events, opts = {}) {
 <p class="sub">Run <span class="mono">${esc(run.runId || 'unknown')}</span> · ${esc(when(run.start))} → ${esc(when(run.end))} · ${esc(dur(s.wallMs))}</p>
 ${verdictBanner}
 <dl class="kv">
-<dt>Outcome</dt><dd>${badge(run.status === 'complete' ? 'DONE' : run.status === 'INCOMPLETE' ? 'INCOMPLETE' : run.status === 'stopped' ? 'BLOCKED' : 'FAILED')} ${esc(run.status)}${run.stopReason ? ` · stop reason: <strong>${esc(run.stopReason)}</strong>` : ''}</dd>
+<dt>Outcome</dt><dd>${badge(run.status === 'complete' ? 'DONE' : ['INCOMPLETE', 'aborted'].includes(run.status) ? 'INCOMPLETE' : run.status === 'stopped' ? 'BLOCKED' : 'FAILED')} ${esc(run.status)}${run.stopReason ? ` · stop reason: <strong>${esc(run.stopReason)}</strong>` : ''}</dd>
 <dt>Spend</dt><dd>${esc(usd(run.spentUsd))}${run.budgetUsd != null ? ` of ${esc(usd(run.budgetUsd))} budget` : ''} <span class="note">(client-side estimate)</span></dd>
 <dt>Window</dt><dd>${run.until ? `until ${esc(when(run.until))}` : 'no end time set'}</dd>
 <dt>Base branch</dt><dd class="mono">${esc(run.base || '')}</dd>
