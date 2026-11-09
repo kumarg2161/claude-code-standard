@@ -1,0 +1,19 @@
+# Nothing machine-specific belongs in this repo.
+settings.json
+settings.local.json
+settings.local.json.proposed
+hook-audit.log
+*.backup-*.tar.gz
+*.prelink-*.tar.gz
+*.bak
+*.bak-*
+sessions/
+cache/
+projects/
+file-history/
+shell-snapshots/
+daemon*
+history.jsonl
+plugins/cache/
+plugins/marketplaces/
+plugins/repos/

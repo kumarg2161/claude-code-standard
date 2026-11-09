@@ -1,0 +1,18 @@
+# Line endings matter here more than usual.
+#
+# A hook script checked out with CRLF on Windows fails under Git Bash with
+# "\r: command not found" — which reads like a broken script, not a line-ending
+# problem, and costs an afternoon to find. Force LF on everything bash touches
+# regardless of the cloner's core.autocrlf setting.
+
+* text=auto eol=lf
+
+*.sh   text eol=lf
+*.md   text eol=lf
+*.json text eol=lf
+
+# PowerShell is the exception: CRLF is its native form.
+*.ps1  text eol=crlf
+
+*.png binary
+*.zip binary

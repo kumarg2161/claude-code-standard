@@ -1,0 +1,7 @@
+{
+  "_comment": "Only needed when detect-verify.sh prints UNKNOWN, or to override it. Commit this file.",
+  "components": [
+    { "dir": "backend",  "stack": "python", "test": "pytest -q -m 'not slow'", "lint": "ruff check .", "typecheck": "mypy ." },
+    { "dir": "frontend", "stack": "node",   "test": "pnpm run test --run",     "typecheck": "pnpm run typecheck" }
+  ]
+}
