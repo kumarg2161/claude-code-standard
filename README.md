@@ -1,190 +1,104 @@
 # claude-code-standard
 
-Shared Claude Code configuration for the team: engineering rules, commands,
-subagents, safety hooks, domain skills, and a plan → test → review → verify
-delivery pipeline.
-
-Works on macOS, Linux, WSL, and native Windows from the same clone.
-
----
-
-## Quick start
-
-### macOS / Linux / WSL
-
-```bash
-git clone https://git.example.com/your-org/claude-code-standard.git
-cd claude-code-standard
-cp templates/CLAUDE.personal.example.md CLAUDE.personal.md   # edit: your role, stack, tone
-./install.sh            # dry run — shows every action, changes nothing
-./install.sh --apply
-```
-
-### Windows (PowerShell, not WSL)
-
-```powershell
-git clone https://git.example.com/your-org/claude-code-standard.git
-cd claude-code-standard
-Copy-Item templates\CLAUDE.personal.example.md CLAUDE.personal.md   # edit it
-.\install.ps1           # dry run
-.\install.ps1 -Apply
-```
-
-If PowerShell blocks the script:
-`Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass`
-
-**Install Git for Windows first.** Every hook here is a POSIX shell script, and
-hook commands run under Git Bash when it is present. Without it they are
-registered, listed, and never execute — silently. See
-[`docs/WINDOWS.md`](docs/WINDOWS.md).
-
-**Using WSL?** Use `install.sh` from inside the WSL terminal, not `install.ps1`.
-Windows and WSL have separate config directories, and installing into the wrong
-one is the most common setup failure. `claude doctor` and `/status` tell you which
-is live.
-
-### Then, on every platform
-
-1. **Restart Claude Code completely** — commands and hooks load at startup.
-2. `/hooks` → expect **PreToolUse: 3**, **Stop: 2**
-3. Type `/` → expect `/work`, `/plan`, `/verify` alongside the team commands
-4. Prove the hooks actually run (below)
-
----
-
-## Prove the hooks run
-
-`/hooks` shows what is **registered**, not what **executes**. A hook whose path
-fails to resolve stays listed and silently never runs — no error, no warning.
-
-```bash
-# macOS / Linux / WSL
-~/.claude/tools/add-hook-audit.sh --apply
-
-# Windows (PowerShell)
-bash "/c/Users/$env:USERNAME/.claude/tools/add-hook-audit.sh" --apply
-```
-
-Restart Claude Code, use it for anything, then check `~/.claude/hook-audit.log`
-(`%USERPROFILE%\.claude\hook-audit.log` on Windows).
-
-Entries mean the safety layer is live. An empty file means it is configured and
-dead. Do this once per machine before trusting it. `--remove` reverses it.
-
----
-
-## The delivery pipeline
+A spec-driven, autonomous delivery toolkit for Claude Code, tuned for **TypeScript backend, React web and
+React Native mobile** in a monorepo. You write and approve a spec; a time-boxed unattended run implements it
+task by task, has a fresh session review it independently, raises a GitHub PR, and writes an HTML status report.
 
 ```
-/work fix the timeout on the exam sessions endpoint
+idea -> spec -> clarify -> plan -> tasks -> analyze -> APPROVE (the one human gate)
+     -> ccs-run: worktree per feature -> fresh session per task (red-first, review, verify, commit)
+     -> runner gate -> independent review (fresh Claude or Codex) -> fix loop -> PR (draft if anything is open)
+     -> ccs-reports/latest.html
 ```
 
-Investigates, writes `.claude/work/<slug>/01-plan.md` with numbered acceptance
-criteria, then **stops for your approval**. That is the only human gate. After
-approval it runs test plan → implement → review → verify unattended and reports
-`PASS` / `FAIL` / `BLOCKED`.
+## Layout
 
-**Read [`docs/PIPELINE.md`](docs/PIPELINE.md) before your first run.** It covers
-what runs unattended and what stops it, how to write acceptance criteria that
-actually constrain the later stages, and when to use `/work` versus the
-individual commands.
-
-Four design rules worth knowing before changing anything:
-
-- **The reviewer never sees the implementer's reasoning.** Plan and diff only. A
-  reviewer sharing context confirms assumptions instead of testing them.
-- **The verifier never reads the diff.** Its verdict comes from exit codes. A
-  suite that exits 0 having run zero assertions is `BLOCKED`, not `PASS`.
-- **Bugs are red-first.** The failing test must exist and fail before the fix
-  does, with its output recorded.
-- **Artifacts, not transcript.** Each stage reads the previous stage's file, so
-  nothing is lost to compaction.
-
-Runners are auto-detected per component, so a Python service and a TypeScript app
-in one repo each get their own. If detection prints `UNKNOWN`, copy
-`templates/verify.json.example` to `.claude/verify.json` and commit it — the only
-per-repo config. `.claude/work/` is added to `.git/info/exclude` automatically on
-first use.
-
----
-
-## What is in here
-
-| Path | What |
+| Plugin | Role |
 |---|---|
-| `install.sh` / `install.ps1` | Installers — bash and PowerShell |
-| `base/CLAUDE.team.md` | Shared rules: anti-hallucination, security, code style, git |
-| `base/rules/` | Behaviour and code standards |
-| `base/commands/` | `/start-task`, `/review-code`, `/design-api`, `/estimate-effort`, … |
-| `base/agents/` | `explore-codebase`, `security-reviewer` |
-| `base/hooks/` | Bash guard, sensitive-file guard, secret scanners, skill logger |
-| `base/skills/` | `architect`, `api-design`, `db-design`, `devops`, `product-consult`, `proposal` |
-| `pipeline/` | `/work` `/plan` `/testplan` `/implement` `/review` `/verify` + reviewer and verifier subagents |
-| `templates/` | Personal CLAUDE.md stub, `verify.json` example |
-| `tools/` | Audit and link-health scripts |
-| `docs/PIPELINE.md` | How the autonomy works, and how to write a plan worth approving |
-| `docs/WINDOWS.md` | Native Windows: Git Bash, path form, line endings |
+| `plugins/ccs-core` | Stack-agnostic: spec commands, task pipeline, runner (`bin/ccs-run.mjs`), reviewer agents, report, safety hooks |
+| `plugins/ccs-backend-ts` | TypeScript API skills (`ts-backend`, `api-design`, `db-design`), Vitest + supertest recipes |
+| `plugins/ccs-web-react` | React skills, RTL + MSW recipes, opt-in Playwright |
+| `plugins/ccs-mobile-rn` | React Native / Expo skills, jest-expo + RNTL recipes, opt-in Maestro |
 
-Skills are model-invoked — Claude matches your request against each skill's
-`description` line and loads what fits. Nothing to type, though `/architect`
-forces one. If a skill never fires, widen its description rather than assuming it
-is broken.
+Packs hold only stack knowledge and meet core through three project files, so adding Flutter or FastAPI later
+touches nothing in core: see [`docs/STACK-PACKS.md`](docs/STACK-PACKS.md).
 
----
+## Install
 
-## What is deliberately NOT shared
-
-- **`settings.json`** — hook paths are absolute and machine-specific, so each
-  installer generates them locally. Gitignored.
-- **`CLAUDE.personal.md`** — your profile and tone preferences. Gitignored.
-- **`rules/lessons.md`** — ships empty. Lessons are specific to the projects and
-  clients you work on. Anything genuinely general belongs in `core-behaviors.md`
-  or `code-standards.md`, where it gets reviewed rather than accumulated.
-
----
-
-## Uninstall / roll back
-
-Both installers write a timestamped backup before touching anything.
+Requires: Claude Code >= 2.1.3xx (uses `--permission-prompts`), Node >= 20, git, jq, python3; `gh` (authenticated) for PRs.
 
 ```bash
-# macOS / Linux / WSL
-rm -rf ~/.claude && tar -xzf ~/.claude.backup-<timestamp>.tar.gz -C ~
+# In Claude Code:
+/plugin marketplace add /path/to/claude-code-standard
+/plugin install ccs-core@claude-code-standard
+/plugin install ccs-backend-ts@claude-code-standard    # whichever stacks you use
 ```
 
-```powershell
-# Windows — expand the backup zip over %USERPROFILE%\.claude
-Expand-Archive "$env:USERPROFILE\.claude-backup-<timestamp>.zip" -DestinationPath "$env:USERPROFILE\.claude" -Force
+Commands appear namespaced: `/ccs-core:ccs-init`, `/ccs-core:ccs-specify`, ...
+Try it without installing: `claude --plugin-dir plugins/ccs-core --plugin-dir plugins/ccs-backend-ts`.
+
+> **Migrating from the old installer** (`install.sh`/`install.ps1`/`base/`/`pipeline/`): those are superseded. Hooks now
+> register through the plugin's `hooks.json`; do not run both, or every hook fires twice.
+
+## Build a product with it
+
+```text
+/ccs-core:ccs-init                         once per repo; then run each pack's /ccs-<pack>-init
+/ccs-core:ccs-specify <what users need>    writes specs/001-slug/spec.md
+/ccs-core:ccs-clarify                      resolves [NEEDS CLARIFICATION]
+/ccs-core:ccs-plan                         plan, contracts (OpenAPI), data model, quickstart
+/ccs-core:ccs-tasks                        tasks.md with observable ACs and autonomy flags
+/ccs-core:ccs-analyze                      READY / NOT-READY
+/ccs-core:ccs-approve                      the gate; commits the specs (never pushes)
+/ccs-core:ccs-overnight                    preflight + dry run + the command to start a run
 ```
-
----
-
-## Known rough edges
-
-- `CLAUDE.md` tells Claude to delete the oldest lesson past 15 entries. That
-  evicts by age, not value — graduate lessons worth keeping into the rules files.
-- `.claudeignore` is not a mechanism Claude Code reads. File access is governed by
-  `permissions.deny` in `settings.json`.
-- `architect` and `api-design` overlap on API work. Whichever description matches
-  better wins, which is arbitrary until they are differentiated.
-- The VS Code extension on Windows has a known issue reporting "requires
-  git-bash" despite Git Bash being installed. The CLI works in the same
-  environment — see `docs/WINDOWS.md`.
-
----
-
-## Contributing
-
-Changes to `base/` and `pipeline/` affect everyone — open a PR.
-
-Test against a scratch destination, never your live config:
 
 ```bash
-./install.sh --apply --dest ~/.claude-test          # macOS / Linux / WSL
-.\install.ps1 -Apply -Dest "$env:USERPROFILE\.claude-test"   # Windows
+caffeinate -i node <plugin>/bin/ccs-run.mjs --until 07:00 --budget-usd 40
+# options: --features 001,002  --base main  --no-pr  --dry-run  --max-attempts 3  --task-budget-usd 5
 ```
 
-Shell scripts must stay POSIX-portable: no `readlink -f`, no `mapfile`, no
-`sed -i` without a backup argument, no bash 4 syntax. macOS ships bash 3.2 and
-BSD userland, and the usual failure is a script that appears to work while
-silently doing nothing.
+Read [`docs/PIPELINE.md`](docs/PIPELINE.md) before your first spec: **acceptance-criteria quality decides everything
+downstream.** Read [`docs/AUTONOMY.md`](docs/AUTONOMY.md) before your first unattended run: it lists each guardrail,
+what enforces it, and which ones are only instructions.
+
+## The report
+
+`ccs-reports/<run-id>.html` (and `latest.html`), written even if the run is killed. Generated from an append-only
+ledger by code, so no model can alter it: outcome and stop reason, spend vs budget, per-feature PR links and review verdicts,
+per-task status/attempts/verdict/time/cost/commit, error excerpts, what is unproven or human-only, and next actions.
+`/ccs-core:ccs-status-report` regenerates it from any ledger. It is git-excluded so it never lands in a PR.
+
+## Status: what is verified and what is not
+
+**Verified (automated, in `tests/`):** 22 node tests and 21 hook cases (`node --test tests/*.test.mjs`,
+`/bin/bash tests/hooks.sh`), covering the tasks parser and linter, report rendering (including injection and truncated ledgers),
+and the runner against a fake `claude`/`gh` with real git: isolation, retries, BLOCKED, budget stop, SIGTERM, dry run,
+unapproved specs, the fix loop, draft vs ready PRs, and that only `ccs/*` is pushed. Three guardrails were mutation-checked.
+
+**Verified once by hand with the real model (cost about $0.7):** a dependency-free fixture, two tasks, both PASS with red-first
+evidence, a fresh-session review that stayed out of the implementer's notes, `main` untouched, plugin hooks firing headless
+(audit-log `DENY` entry from the Bash guard). All four plugins pass `claude plugin validate`.
+
+**Not verified yet:**
+- A run against a real **TypeScript monorepo** (pnpm, Vitest, React, Expo). The stack packs are written from convention, not exercised.
+- A real **GitHub push and PR** (`gh` is faked in tests). Do the first one on a throwaway repo.
+- The **Codex reviewer** path (Codex was not installed here; flags are unconfirmed and it falls back to Claude).
+- Marketplace **install flow** and the **launchd** template (template syntax is lint-checked, never loaded).
+- Multi-feature and long runs; parallel tasks (not implemented).
+
+## Known limits
+
+- `autonomy: auto` safety rests on `ccs-lint`'s keyword check plus your review at `ccs-approve`. It can miss a risky task.
+- A task can exceed its budget slightly before the harness stops it; cost figures are client-side estimates.
+- The runner stops *starting* work at `--until`; a running task may finish up to `--task-timeout-min`.
+- Compound shell commands (`a; b`) do not match allow rules and are denied. See `docs/AUTONOMY.md`.
+
+## Developing
+
+```bash
+node --test tests/*.test.mjs && /bin/bash tests/hooks.sh
+for p in plugins/*; do (cd $p && claude plugin validate .); done
+```
+Shell scripts stay bash-3.2 safe (macOS): no `${var^^}`, `mapfile`, `readlink -f`. The Bash-guard bug that failed open on macOS
+came from exactly that. Changes to `ccs-core` affect everyone: open a PR.

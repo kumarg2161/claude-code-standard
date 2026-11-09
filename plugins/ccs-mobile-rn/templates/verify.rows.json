@@ -1,0 +1,2 @@
+{ "_comment": "Example row for a pnpm monorepo. Use only if detect-verify.sh cannot find the scripts.",
+  "components": [ { "dir": "apps/mobile", "stack": "node", "test": "pnpm test --ci", "typecheck": "pnpm typecheck", "lint": "pnpm lint" } ] }

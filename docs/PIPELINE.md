@@ -1,264 +1,122 @@
-# The delivery pipeline — how the autonomy actually works
+# The spec-driven workflow
 
-One human gate, four unattended stages, four artifacts. This document explains
-what runs on its own, what stops it, and why almost everything depends on the
-plan you approve at the start.
-
----
-
-## 1. The shape
+One human gate, then machines. You write and approve a spec. Everything after the gate is mechanical,
+which is why the spec carries all the weight.
 
 ```
-  /plan ─────────────► 01-plan.md          ◄── YOU APPROVE HERE. Only here.
-    │
-    ├─► /testplan ───► 02-test-plan.md     ─┐
-    ├─► /implement ──► code + log           │  unattended
-    ├─► /review ─────► 03-review.md         │
-    └─► /verify ─────► 04-verification.md  ─┘
-                             │
-                             └─► VERDICT: PASS | FAIL | BLOCKED
+ /ccs-core:ccs-init              once per repo: constitution, verify config, git excludes
+ /ccs-core:ccs-specify <idea>    specs/NNN-slug/spec.md      what and why, never how
+ /ccs-core:ccs-clarify           <= 5 questions, answers written back into the spec
+ /ccs-core:ccs-plan              plan.md, research.md, data-model.md, contracts/, quickstart.md
+ /ccs-core:ccs-tasks             tasks.md  (ordered, each with observable ACs + autonomy flag)
+ /ccs-core:ccs-analyze           read-only consistency check -> analysis.md  VERDICT: READY | NOT-READY
+ /ccs-core:ccs-approve           THE gate: marks APPROVED, commits the specs locally (never pushes)
+        │
+        ▼
+ /ccs-core:ccs-overnight         preflight + dry run + prints the command (does not start it)
+ node .../bin/ccs-run.mjs ...    unattended: tasks -> review -> fix -> PR, always writes the report
+        │
+        ▼
+ ccs-reports/latest.html         what was done, what failed, what a human must decide
 ```
 
-`/work <description>` runs the whole chain and pauses once, at the gate.
+Commands are namespaced by Claude Code as `/ccs-core:<name>`. The stack packs add `ccs-backend-ts`,
+`ccs-web-react` and `ccs-mobile-rn` skills and an init command each.
 
-Two properties make this different from asking Claude to "fix the bug and test it":
+## Where things live
 
-**Each stage reads the previous stage's file, not the conversation.** Transcript
-gets compacted; files do not. Stage 4 can state exactly which acceptance criterion
-each test covers because it reads the same `01-plan.md` that stage 1 wrote, hours
-and many tokens later.
+| Path | Tracked? | What |
+|---|---|---|
+| `.specify/memory/constitution.md` | yes | The rules every plan is checked against. Amend with `/ccs-core:ccs-constitution`. |
+| `specs/NNN-slug/spec.md, plan.md, tasks.md, contracts/` | **yes** | The product's source of truth. Travels with the PR. |
+| `specs/NNN-slug/tasks/Txxx/01-plan.md ... 04-verification.md` | yes | Per-task evidence: plan, red-first test plan, review, verdict. |
+| `specs/NNN-slug/review/pr-review-roundN.md` | yes | The independent pre-PR review. |
+| `.ccs/` | no (git-excluded) | Scratch: active pointer, worktrees, run ledgers, logs. |
+| `ccs-reports/` | no (git-excluded) | Generated HTML reports. Never in a PR. |
+| `.claude/verify.json` | yes | Only needed when `detect-verify.sh` cannot find your test commands. |
+| `.claude/ccs-run.json` | yes | Optional: `{"allow":[...],"deny":[...]}` extra permission rules for runs. |
 
-**Two stages run in fresh context deliberately.** The reviewer and the verifier
-are subagents that never see the implementation reasoning. This is the point, not
-an optimisation — see §5.
+## `tasks.md`: the contract the runner reads
 
----
+```
+- [ ] T004 [US1] [api] [P] Add POST /users in apps/api/src/users.ts (zod body, 201/400)
+      AC: AC-4.1 valid body returns 201 and the user | check: pnpm --filter api test users
+      AC: AC-4.2 (negative) GET /health still returns 200 | check: pnpm --filter api test health
+      deps: T002, T003        autonomy: auto
+```
 
-## 2. What "unattended" means, precisely
+- **Tags**: `[US1]` story, `[api]|[web]|[mobile]|[shared]` component, `[P]` parallel-safe, `[setup]|[found]|[polish]` outside stories.
+- **Tests are not separate tasks.** Each task writes its failing test first, then the code, and leaves the suite green.
+  A task that only adds red tests could never verify PASS.
+- **`autonomy: human (reason: ...)`** keeps a task out of unattended runs: ambiguous requirements,
+  visual/design work, auth/crypto/access control, new architecture decisions, migrations against anything but a
+  local database, anything needing a device or credentials. `ccs-lint` rejects risky wording on an `auto` task unless you
+  write a reason.
+- `node plugins/ccs-core/bin/ccs-lint.mjs specs/NNN-slug` checks all of this deterministically.
 
-After you approve, Claude will not stop to ask permission, confirm it understood,
-or report progress. It runs `/testplan`, `/implement`, `/review`, `/verify` in
-order and reports at the end.
+## Writing acceptance criteria that do work
 
-It **will** stop and hand back if:
-
-| Condition | Why it stops rather than guessing |
-|---|---|
-| The plan's root cause turns out to be wrong | Everything downstream was derived from it |
-| An acceptance criterion is unachievable as written | Weakening an AC to make it pass is the failure this exists to prevent |
-| The work is already shipped | Nothing to do; the plan was based on a stale read |
-| `/review` returns UNMET that needs a product decision | Not a technical call |
-| `/verify` returns BLOCKED for an environmental reason it cannot fix | A missing database is not a code problem |
-| A destructive or outward-facing action is needed that the plan did not authorise | Deploy, publish, migrate, force-push |
-| 3 rounds of review or verify retries are exhausted | Prevents grinding |
-
-It will **not** stop to tell you a test passed, that it is moving to the next
-stage, or that it made a small decision inside the plan's boundaries. If you find
-yourself being asked things mid-run, the plan was underspecified — fix the plan,
-not the prompt.
-
-**Guardrails still apply throughout.** The Bash guard and sensitive-file guard fire
-on every tool call regardless of autonomy, and the Stop gate blocks the session
-from ending while a work item is unverified. Autonomy means fewer questions, not
-fewer controls.
-
----
-
-## 3. Why the plan carries all the weight
-
-Everything after the gate is mechanical. The plan is where judgement lives, and a
-weak plan produces a confident, worthless `PASS`.
-
-Concretely: `/testplan` writes a check per acceptance criterion. `/review` grades
-the diff per acceptance criterion. `/verify` reports pass/fail per acceptance
-criterion. **Every downstream stage is a function of the AC table.** Vague criteria
-in, vague verdict out — and the verdict *looks* identical either way.
-
-### Writing acceptance criteria that do work
-
-An AC must be **observable from outside the code** and **independently checkable**.
+An AC must be **observable from outside the code** and **independently checkable**. Every stage downstream is a function
+of the AC table: tests are written per AC, the review grades per AC, the verdict reports per AC. Vague criteria in, vague
+verdict out, and the verdict looks identical either way.
 
 | Weak | Why it fails | Strong |
 |---|---|---|
-| Export works correctly | Nothing to write a test against | `GET /admin/users/export` returns 200, `Content-Type: text/csv`, and a header row matching the column spec |
+| Export works correctly | Nothing to write a test against | `GET /admin/users/export` returns 200, `Content-Type: text/csv`, header row matches the column spec |
 | Handles errors properly | "Properly" is unfalsifiable | A request with no `tenantId` returns 400 with `error.code=TENANT_REQUIRED` and writes no file |
-| Fixes the timeout | Describes intent, not behaviour | The exam-sessions endpoint returns within 5s for a session with 10k+ documents, with no `MaxTimeMSExpired` in logs |
-| Performance is improved | No baseline | p95 latency on `/sessions/:id` drops below 800ms, measured by the existing load script |
+| Fixes the timeout | Describes intent, not behaviour | The sessions endpoint returns within 5s for a session with 10k+ documents, no `MaxTimeMSExpired` in logs |
+| Performance is improved | No baseline | p95 on `/sessions/:id` below 800ms, measured by the existing load script |
 
-Three habits that pay for themselves:
+- **Every user story needs a negative AC**: something that must still work and that this change plausibly breaks.
+- **Name the check in the AC.** If you cannot say how it is observed, the AC is not finished.
+- **Merge ACs that always pass or fail together.** They are one criterion wearing two hats.
 
-- **Always include one negative criterion** — something that must still work and
-  that this change plausibly breaks. Without it, the pipeline proves the new thing
-  works and says nothing about the regression you just shipped.
-- **Name the check in the AC itself.** If you cannot say how it would be observed,
-  the AC is not finished, and `/testplan` will invent something to cover it.
-- **Merge ACs that always pass or fail together.** They are one criterion wearing
-  two hats, and they inflate the coverage table without adding evidence.
+Read the **Assumptions** in `spec.md` and `plan.md` before approving. A wrong assumption survives every later stage
+and passes verification, because the tests were generated from the same assumption.
 
-### Reading the Assumptions section
+## One task, interactively (and ad-hoc work)
 
-`/plan` asks at most three questions, once. Everything else it would have asked
-becomes an assumption, written as a decision you can overturn in one line.
-
-This is where scope quietly gets decided — export column set, row limits, whether
-it streams or buffers, which tenant filter applies. **The assumptions matter more
-than the file list.** A wrong assumption survives all four stages and passes
-verification, because the tests were generated from the same assumption.
-
-### Approving
-
-Read `01-plan.md` itself, not the chat summary. Then either approve, or reply with
-corrections in prose — "AC-2 should be 400 not 422, and export all tenants not just
-the active one". Re-run `/plan` only if the root cause is wrong, not to adjust
-details.
-
----
-
-## 4. `/work` versus the individual commands
-
-`/work` is the default. Use the stages directly when you want a different shape.
+The single-task pipeline from earlier versions still exists for work that is not part of a feature spec:
 
 | Situation | Use |
 |---|---|
-| Normal bug, feature, or enhancement | `/work <description>` |
-| You want to think about the approach before committing to it | `/plan <description>`, then stop |
-| A plan already exists and was approved earlier | `/testplan`, then `/implement` |
-| You wrote the code yourself and want it graded against a plan | `/review` |
-| Something changed; you want a fresh verdict on the existing plan | `/verify` |
-| Reviewing someone else's PR against a written spec | `/plan` the spec, then `/review` |
-| Documentation work | `/work` with type DOCS — every claim gets a check |
-| The work is parked or superseded | `/work-abandon` |
+| Ad-hoc bug fix or small enhancement | `/ccs-core:ccs-work <description>` (plan -> gate -> testplan -> implement -> review -> verify) |
+| Think about the approach first | `/ccs-core:ccs-task-plan <description>`, then stop |
+| Plan already approved | `/ccs-core:ccs-testplan`, then `/ccs-core:ccs-implement` |
+| You wrote the code, grade it against a plan | `/ccs-core:ccs-review` |
+| Fresh verdict on the existing plan | `/ccs-core:ccs-verify` |
+| Parked or superseded | `/ccs-core:ccs-work-abandon` |
 
-The stages are separable because they read files, not conversation. `/verify` run
-tomorrow on a plan approved today works exactly the same.
+Ad-hoc work is stored in `specs/adhoc/<slug>/`. If you cannot write two acceptance criteria for a change, it does not need a plan.
 
-**When not to use the pipeline at all:** a typo, a one-line config change, a
-question. `/work` on trivial work costs four artifacts and a review cycle to prove
-something you could see by eye. Rough line: if you cannot write two acceptance
-criteria for it, it does not need a plan.
+## Why review and verify are isolated
 
----
+**The reviewer receives the plan and the diff, nothing else.** A reviewer that shares the implementer's context re-derives the
+same reasoning and finds it sound, because it is the same reasoning. It returns `MET`, `UNMET`, `PARTIAL` or
+`UNVERIFIABLE-BY-READ` per AC. The fourth state is a feature: "needs to be run" beats a guessed MET that execution contradicts.
 
-## 5. Why review and verify are isolated
+**The verifier never reads the diff.** Its verdict comes from exit codes and test output. A suite that exits 0 having run zero
+assertions is `BLOCKED`, not `PASS`; `MANUAL` checks are `UNPROVEN`, never `PASS`; it never edits a test to make it pass.
 
-**The reviewer receives `01-plan.md` and `git diff`. Nothing else.** No transcript,
-no test plan, no rationale, no "here's what I was going for". A reviewer that
-shares the implementer's context confirms the implementer's assumptions — it
-re-derives the same reasoning and finds it sound, because it is the same reasoning.
+**Red-first for bugs.** The failing test must exist and fail before the fix, with its output pasted into `02-test-plan.md`.
+If the check passes before any change, the plan's root cause is wrong and the work stops.
 
-It returns one of four states per AC:
+In a feature run there is a **second, feature-level review** before the PR, by a fresh session (or Codex), that sees only the
+spec, plan, contracts, constitution and the diff.
 
-- `MET` — with the file:line producing the behaviour
-- `UNMET` — with what is missing
-- `PARTIAL` — with the gap named
-- `UNVERIFIABLE-BY-READ` — needs execution to judge
+## Verdicts
 
-That fourth state is a feature. A reviewer that says "this needs to be run" is more
-useful than one that guesses `MET` and is contradicted by stage 4.
+- **PASS**: every AC had an automated check that passed for the right reason. Read `## Unproven` before treating it as complete.
+- **FAIL**: a check failed. The runner retries with a fresh session (max 3), then marks the task FAILED.
+- **BLOCKED**: checks could not run, a suite had zero assertions, an AC had no check, or the task needs a human decision
+  (`BLOCKED.md`). It is the honest verdict for "we do not know" and is not a softer FAIL.
 
-**The verifier never reads the diff.** Its verdict comes from exit codes and test
-output. It cannot be persuaded by code that looks correct. Specifically:
+## Common mistakes
 
-- A suite that exits 0 having executed zero assertions is `BLOCKED`, not `PASS`
-- A check that passes for the wrong reason is a failure, even when green
-- `MANUAL` checks are `UNPROVEN` and appear in the summary — never `PASS`
-- It will not modify a test to make it pass; a broken check is a finding
-
-**Red-first, for bugs.** The failing test must exist and fail *before* the fix
-does, and its output is pasted into `02-test-plan.md`. Without this, stage 4 is
-circular: the test was written to match whatever the code now does. If the check
-passes before any change is made, the plan's root cause is wrong and the pipeline
-stops.
-
----
-
-## 6. Reading the output
-
-| File | Read it when |
-|---|---|
-| `01-plan.md` | Before approving. Always. |
-| `02-test-plan.md` | To see what will and will not be proven — check `## Not covered` |
-| `03-review.md` | On `CHANGES-REQUIRED`, or to see what needed execution to judge |
-| `04-verification.md` | Always, especially the `## Unproven` section |
-
-A `PASS` means *every acceptance criterion had an automated check that passed for
-the right reason*. It does not mean the change is correct — it means the change
-does what the plan said, and the plan was your judgement. Read `## Unproven` before
-treating a green verdict as complete coverage.
-
-### The three verdicts
-
-- **`PASS`** — proceed. Check `## Unproven` first.
-- **`FAIL`** — a check failed. Fix and re-run `/verify`; do not edit the artifact.
-- **`BLOCKED`** — checks could not run: missing database, unresolved runner, an AC
-  with no check, or a suite with zero assertions. This is the honest verdict for
-  "we do not know", and it is not a softer `FAIL`.
-
-The Stop hook enforces this. While `.claude/work/.active` names a work item whose
-verification is not `PASS`, Claude cannot end the turn. `/work-abandon` clears it
-deliberately and records why.
-
----
-
-## 7. A worked example
-
-```
-/work fix the MaxTimeMSExpired timeout on the exam sessions endpoint
-```
-
-**`/plan`** greps every surface that touches exam sessions rather than only the
-endpoint named, reproduces the timeout, and writes:
-
-- Root cause with `file:line`, evidence marked `EXECUTED`
-- `AC-1`: the endpoint returns within 5s for a session with 10k+ documents
-- `AC-2`: no `MaxTimeMSExpired` appears in logs for that request
-- `AC-3` (negative): pagination on the same endpoint still returns correct totals
-- Assumptions: which index is assumed present, what "large session" means
-- Blast radius: other consumers of the same query path
-
-It stops. You read it, fix `AC-3`'s threshold, approve.
-
-**`/testplan`** detects the runner, writes a test reproducing the timeout, runs it,
-confirms it fails with `MaxTimeMSExpired` and not a connection error, and pastes
-the red output.
-
-**`/implement`** changes only the files the plan listed, running each AC's checks
-as it goes.
-
-**`/review`** — a fresh subagent, plan and diff only — returns `MET` for AC-1 and
-AC-3, `UNVERIFIABLE-BY-READ` for AC-2 (log assertions need a run), plus a `HIGH`
-finding on an unrelated swallowed error it noticed in the diff.
-
-**`/verify`** runs everything, reports per-AC results with exit codes, and emits
-`VERDICT: PASS` with AC-2 now proven by execution.
-
-Total human involvement: one description, one plan read, one correction, one
-approval.
-
----
-
-## 8. First run in a new repo
-
-Two things happen automatically: `.claude/work/` is added to `.git/info/exclude`
-(local, never committed), and the runner is auto-detected per component — a Python
-service and a TypeScript app in one tree each get their own.
-
-If detection prints `UNKNOWN`, copy `templates/verify.json.example` to
-`.claude/verify.json`, fill it in once, and commit it. That is the only per-repo
-configuration the pipeline needs.
-
----
-
-## 9. Common mistakes
-
-- **Approving the chat summary instead of the plan file.** The summary lists files;
-  the file has the criteria that everything downstream is graded against.
-- **Vague ACs.** The most expensive mistake, because the failure is invisible —
-  you get a confident `PASS` that proves nothing.
-- **Skipping the negative criterion.** The pipeline proves the new behaviour works
-  and stays silent about what broke.
-- **Treating `BLOCKED` as nearly `PASS`.** It means the checks did not run.
-- **Editing an artifact to change a verdict.** Every stage refuses to do this;
-  doing it by hand removes the only reason the artifacts are trustworthy.
-- **Using `/work` for trivial changes.** Four artifacts to prove a typo fix.
-- **Leaving a work item active.** The Stop gate will keep asking. `/work-abandon`.
+- Approving the chat summary instead of `spec.md` and `tasks.md`.
+- Vague ACs: the most expensive mistake, because the failure is invisible.
+- Skipping the negative AC: the run proves the new thing works and is silent about what broke.
+- Marking a risky task `auto` to "save time". Auth, crypto and migrations are human tasks.
+- Forgetting to commit the approved specs: the runner reads them from the base branch and will skip the feature.
+- Treating BLOCKED as nearly PASS. It means the checks did not run.
+- Editing an artifact to change a verdict. Every stage refuses to do this; doing it by hand removes the only reason the artifacts are trustworthy.

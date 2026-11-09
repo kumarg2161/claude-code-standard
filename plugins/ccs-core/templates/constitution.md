@@ -55,7 +55,9 @@
 ## Article VII — Delivery
 
 - Conventional commits: `feat|fix|refactor|docs|chore|perf|test(scope): message`.
-- Check `git status` before committing. Never commit secrets or generated report/scratch directories.
+- Check `git status` before committing. Never commit secrets, `.ccs/` (run scratch) or `ccs-reports/` (generated reports).
+- Per-task evidence (`specs/<feature>/tasks/Txxx/`) and independent reviews (`specs/<feature>/review/`) ARE committed on purpose:
+  they are the audit trail and travel with the PR. Do not flag or remove them.
 - Unattended work runs only on tasks marked `autonomy: auto`. These are never auto: ambiguous
   requirements, design-heavy or visual work, auth/crypto/access-control changes, new architecture
   decisions, and migrations against anything but a local database.
@@ -63,7 +65,7 @@
   after an independent review.
 
 <!-- PACK:BEGIN -->
-<!-- Stack packs append articles here (VIII+) via their ccs-<pack>-init command. -->
+<!-- Stack packs append pack-prefixed articles (B-1, W-1, M-1) here via their ccs-<pack>-init command. -->
 <!-- PACK:END -->
 
 ## Amendments

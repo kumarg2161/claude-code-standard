@@ -1,0 +1,1 @@
+{ "allow": [ "Bash(pnpm --filter web *)", "Bash(pnpm --filter @*/web *)" ], "deny": [ "Bash(pnpm exec playwright install*)", "Bash(pnpm --filter web dev*)", "Bash(pnpm --filter web start*)" ] }

@@ -1,0 +1,1 @@
+{ "allow": [ "Bash(pnpm --filter mobile *)", "Bash(pnpm --filter @*/mobile *)" ], "deny": [ "Bash(eas *)", "Bash(expo prebuild*)", "Bash(pnpm exec expo prebuild*)", "Bash(maestro *)", "Bash(xcrun *)", "Bash(adb *)" ] }

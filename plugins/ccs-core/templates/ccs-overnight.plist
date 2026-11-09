@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Scheduled autonomous run. Fill the __PLACEHOLDERS__, save as ~/Library/LaunchAgents/com.ccs.overnight.plist,
+     then: launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.ccs.overnight.plist
+     Remove: launchctl bootout gui/$(id -u)/com.ccs.overnight
+     The Mac must be awake and logged in at the start time (caffeinate keeps it awake once started). -->
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.ccs.overnight</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/bin/caffeinate</string><string>-i</string>
+    <string>__NODE__</string>
+    <string>__RUNNER__</string>
+    __ARGS__
+  </array>
+  <key>WorkingDirectory</key><string>__REPO__</string>
+  <key>StartCalendarInterval</key>
+  <dict><key>Hour</key><integer>__HOUR__</integer><key>Minute</key><integer>__MINUTE__</integer></dict>
+  <key>EnvironmentVariables</key>
+  <dict><key>PATH</key><string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string></dict>
+  <key>StandardOutPath</key><string>__REPO__/.ccs/launchd.out.log</string>
+  <key>StandardErrorPath</key><string>__REPO__/.ccs/launchd.err.log</string>
+</dict>
+</plist>
