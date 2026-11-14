@@ -2,7 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { mkdtempSync, writeFileSync, mkdirSync } from 'node:fs';
+import { mkdtempSync, writeFileSync, mkdirSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -96,4 +96,15 @@ test('lint rejects story without a negative AC and task without AC', () => {
   assert.equal(lint(SPEC, noNeg).status, 1);
   const noAc = GOOD.replace(/      AC: AC-1\.1.*\n/, '');
   assert.equal(lint(SPEC, noAc).status, 1);
+});
+
+test('template: comment sample is not a task', () => {
+  const md = readFileSync(join(here, '../plugins/ccs-core/templates/tasks.md'), 'utf8');
+  const { tasks } = parseTasks(md);
+  assert.deepEqual(tasks.map(t => t.id), ['T001']);
+});
+
+test('multi-line and inline comments are skipped', () => {
+  const md = '<!--\n- [ ] T009 x\n      deps: none  autonomy: auto\n-->\n- [ ] T001 [setup] y <!-- note -->\n      AC: AC-1.1 ok | check: true\n      deps: none  autonomy: auto\n';
+  assert.deepEqual(parseTasks(md).tasks.map(t => t.id), ['T001']);
 });

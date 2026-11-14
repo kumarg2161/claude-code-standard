@@ -14,8 +14,19 @@ export function parseTasks(markdown) {
 
   const flush = () => { if (cur) tasks.push(cur); cur = null; };
 
-  lines.forEach((raw, i) => {
+  let inComment = false;
+  lines.forEach((full, i) => {
     const n = i + 1;
+    // Blank out HTML comments (template docs contain sample task lines); keeps line numbers intact.
+    let raw = full;
+    if (inComment) {
+      const end = raw.indexOf('-->');
+      if (end < 0) return;
+      raw = raw.slice(end + 3); inComment = false;
+    }
+    raw = raw.replace(/<!--.*?-->/g, '');
+    const open = raw.indexOf('<!--');
+    if (open >= 0) { raw = raw.slice(0, open); inComment = true; }
     const h = raw.match(/^##\s+(Phase[^\n]*)$/);
     if (h) { flush(); phase = h[1].trim(); return; }
     if (/^#{1,3}\s/.test(raw) && !raw.startsWith('## Phase')) { if (!/^#{3,}\s/.test(raw)) flush(); return; }

@@ -7,7 +7,7 @@
 <!--
 LINE FORMAT (one task = one line + indented fields; machine-read by ccs-run, keep it exact):
 
-- [ ] T004 [US1] [api] [P] <imperative description with the exact file path(s)>
+  - [ ] T004 [US1] [api] [P] <imperative description with the exact file path(s)>
       AC: AC-4.1 <observable behaviour> | check: <command or test name>
       AC: AC-4.2 (negative) <what must still work> | check: <command or test name>
       deps: T002, T003        autonomy: auto

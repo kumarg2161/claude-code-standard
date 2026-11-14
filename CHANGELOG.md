@@ -5,6 +5,11 @@ versions follow [SemVer](https://semver.org/). All four plugins share one versio
 
 ## [Unreleased]
 
+### Fixed
+- **`tasks.md` template sample parsed as a real task**: `parseTasks()` now ignores HTML comments, so the example `T004` in
+  `templates/tasks.md` no longer shows up as a fake task (duplicate-id lint errors, phantom task in `ccs-run`). The sample line
+  is also indented so older parsers skip it. Regression tests added.
+
 ## [0.1.0] - 2026-11-09
 
 First release of the plugin layout. Replaces the installer-based `base/` + `pipeline/` bundle.
