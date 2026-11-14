@@ -1,6 +1,6 @@
 {
   "name": "ccs-mobile-rn",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "React Native / Expo pack: skills, Jest + React Native Testing Library recipes, opt-in Maestro E2E. Requires the ccs-core plugin.",
   "author": {
     "name": "Ganesh Kumar S"

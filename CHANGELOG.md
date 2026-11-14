@@ -5,6 +5,8 @@ versions follow [SemVer](https://semver.org/). All four plugins share one versio
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-11-14
+
 ### Fixed
 - **`tasks.md` template sample parsed as a real task**: `parseTasks()` now ignores HTML comments, so the example `T004` in
   `templates/tasks.md` no longer shows up as a fake task (duplicate-id lint errors, phantom task in `ccs-run`). The sample line
@@ -38,5 +40,6 @@ First release of the plugin layout. Replaces the installer-based `base/` + `pipe
 - Not yet run on a real TypeScript/React/Expo monorepo, a real GitHub PR, the Codex reviewer, the marketplace install flow,
   the launchd template, or native Windows. See README "Status".
 
-[Unreleased]: https://github.com/kumarg2161/claude-code-standard/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/kumarg2161/claude-code-standard/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/kumarg2161/claude-code-standard/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/kumarg2161/claude-code-standard/releases/tag/v0.1.0

@@ -1,6 +1,6 @@
 {
   "name": "ccs-core",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Spec-driven workflow (constitution, specify, clarify, plan, tasks, analyze, approve), single-task pipeline (testplan, implement, review, verify), autonomous time-boxed runs with independent review and PR, HTML status reports, and safety hooks.",
   "author": {
     "name": "Ganesh Kumar S"
